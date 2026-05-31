@@ -8,11 +8,27 @@ export type TwitchIrcMessage = {
   raw: string;
   tags: Record<string, string | true>;
   source: TwitchIrcMessageSource | undefined;
-  command: string;
+  command: TwitchIrcCommand;
+  rawCommand: string;
   channel: string | undefined;
   params: string[];
   text: string | undefined;
 };
+
+export enum TwitchIrcCommand {
+  ClearChat = "CLEARCHAT",
+  ClearMessage = "CLEARMSG",
+  Join = "JOIN",
+  Notice = "NOTICE",
+  Part = "PART",
+  Ping = "PING",
+  PrivateMessage = "PRIVMSG",
+  Reconnect = "RECONNECT",
+  RoomState = "ROOMSTATE",
+  UserNotice = "USERNOTICE",
+  UserState = "USERSTATE",
+  Unknown = "UNKNOWN",
+}
 
 export type TwitchIrcMessageSource = {
   raw: string;
@@ -132,7 +148,7 @@ export class TwitchIrcClient {
     for (const rawMessage of messages) {
       const message = parseTwitchIrcMessage(rawMessage);
 
-      if (message.command === "PING") {
+      if (message.command === TwitchIrcCommand.Ping) {
         this.sendRaw(`PONG :${message.text ?? "tmi.twitch.tv"}`);
       }
 
@@ -170,9 +186,9 @@ export function parseTwitchIrcMessage(raw: string): TwitchIrcMessage {
 
   const { commandAndParams, text } = splitTrailingText(remaining);
   const parts = commandAndParams.split(" ").filter((part) => part.length > 0);
-  const command = parts[0];
+  const rawCommand = parts[0];
 
-  if (command === undefined) {
+  if (rawCommand === undefined) {
     throw new Error(`Invalid IRC message command: ${raw}`);
   }
 
@@ -183,11 +199,31 @@ export function parseTwitchIrcMessage(raw: string): TwitchIrcMessage {
     raw,
     tags,
     source,
-    command,
+    command: parseTwitchIrcCommand(rawCommand),
+    rawCommand,
     channel: channelParam?.slice(1),
     params,
     text,
   };
+}
+
+function parseTwitchIrcCommand(command: string): TwitchIrcCommand {
+  switch (command) {
+    case TwitchIrcCommand.ClearChat:
+    case TwitchIrcCommand.ClearMessage:
+    case TwitchIrcCommand.Join:
+    case TwitchIrcCommand.Notice:
+    case TwitchIrcCommand.Part:
+    case TwitchIrcCommand.Ping:
+    case TwitchIrcCommand.PrivateMessage:
+    case TwitchIrcCommand.Reconnect:
+    case TwitchIrcCommand.RoomState:
+    case TwitchIrcCommand.UserNotice:
+    case TwitchIrcCommand.UserState:
+      return command;
+    default:
+      return TwitchIrcCommand.Unknown;
+  }
 }
 
 function parseTags(rawTags: string): Record<string, string | true> {

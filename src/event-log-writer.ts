@@ -1,12 +1,13 @@
 import { mkdir, appendFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { TwitchIrcMessage } from "./twitch-irc-client.js";
+import { TwitchIrcCommand, type TwitchIrcMessage } from "./twitch-irc-client.js";
 
 export type TwitchEventRecord = {
   schemaVersion: 1;
   platform: "twitch";
   type: string;
   command: string;
+  commandType: TwitchIrcCommand;
   messageId: string | undefined;
   timestamp: string;
   twitchTimestamp: string | undefined;
@@ -75,7 +76,8 @@ export function toTwitchEventRecord(message: TwitchIrcMessage): TwitchEventRecor
     schemaVersion: 1,
     platform: "twitch",
     type: getEventType(message),
-    command: message.command,
+    command: message.rawCommand,
+    commandType: message.command,
     messageId: getTag(message, "id"),
     timestamp,
     twitchTimestamp,
@@ -96,30 +98,30 @@ export function toTwitchEventRecord(message: TwitchIrcMessage): TwitchEventRecor
 
 function getEventType(message: TwitchIrcMessage): string {
   switch (message.command) {
-    case "PRIVMSG":
+    case TwitchIrcCommand.PrivateMessage:
       return "chat_message";
-    case "USERNOTICE":
+    case TwitchIrcCommand.UserNotice:
       return getTag(message, "msg-id") ?? "user_notice";
-    case "CLEARCHAT":
+    case TwitchIrcCommand.ClearChat:
       return "clear_chat";
-    case "CLEARMSG":
+    case TwitchIrcCommand.ClearMessage:
       return "clear_message";
-    case "ROOMSTATE":
+    case TwitchIrcCommand.RoomState:
       return "room_state";
-    case "USERSTATE":
+    case TwitchIrcCommand.UserState:
       return "user_state";
-    case "JOIN":
+    case TwitchIrcCommand.Join:
       return "join";
-    case "PART":
+    case TwitchIrcCommand.Part:
       return "part";
-    case "NOTICE":
+    case TwitchIrcCommand.Notice:
       return "notice";
-    case "PING":
+    case TwitchIrcCommand.Ping:
       return "ping";
-    case "RECONNECT":
+    case TwitchIrcCommand.Reconnect:
       return "reconnect";
-    default:
-      return message.command.toLowerCase();
+    case TwitchIrcCommand.Unknown:
+      return message.rawCommand.toLowerCase();
   }
 }
 

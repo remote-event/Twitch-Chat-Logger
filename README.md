@@ -76,6 +76,7 @@ Each line is one normalized Twitch event:
   "platform": "twitch",
   "type": "chat_message",
   "command": "PRIVMSG",
+  "commandType": "PRIVMSG",
   "messageId": "f7ebdc6e-b360-4de2-aca3-bf4652755c28",
   "timestamp": "2026-05-31T08:30:00.000Z",
   "twitchTimestamp": "1780215664496",
