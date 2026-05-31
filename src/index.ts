@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { ChatLogWriter } from "./chat-log-writer.js";
 import { TwitchIrcClient } from "./twitch-irc-client.js";
 
