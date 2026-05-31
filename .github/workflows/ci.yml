@@ -35,4 +35,4 @@ jobs:
 
       - name: Build Docker image
         if: github.event_name == 'push'
-        run: docker build -t twitch-chat-logger:${{ github.sha }} .
+        run: docker build -t twitch-event-logger:${{ github.sha }} .

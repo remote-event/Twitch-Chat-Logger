@@ -1,13 +1,13 @@
-﻿# Twitch Chat Logger
+# Twitch Event Logger
 
-A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or more channels, parses chat messages, and writes normalized JSONL records for later analysis or model training.
+A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or more channels, parses incoming IRC messages, and writes normalized JSONL event records for later analysis or model training.
 
 ## Features
 
 - Anonymous Twitch IRC connection
 - Multi-channel joins with `TWITCH_CHANNELS`
 - Parsed IRC messages with tags, source, command, channel, params, and text
-- Training-friendly JSONL output for `PRIVMSG` chat messages
+- JSONL output for Twitch IRC events such as chat messages, user notices, joins, parts, room state changes, clears, notices, pings, and reconnects
 
 ## Requirements
 
@@ -62,19 +62,20 @@ npm start
 
 ## Data Output
 
-Chat messages are written as JSON Lines under:
+Events are written as JSON Lines under:
 
 ```text
-data/chat/twitch/channel=<channel>/date=<yyyy-mm-dd>/messages.jsonl
+data/events/twitch/channel=<channel>/date=<yyyy-mm-dd>/<event-type>.jsonl
 ```
 
-Each line is one normalized chat message:
+Each line is one normalized Twitch event:
 
 ```json
 {
   "schemaVersion": 1,
   "platform": "twitch",
   "type": "chat_message",
+  "command": "PRIVMSG",
   "messageId": "f7ebdc6e-b360-4de2-aca3-bf4652755c28",
   "timestamp": "2026-05-31T08:30:00.000Z",
   "twitchTimestamp": "1780215664496",
@@ -84,12 +85,19 @@ Each line is one normalized chat message:
   "username": "lemongth",
   "displayName": "lemonGTH",
   "text": "OfCourse",
+  "params": ["#xqc"],
   "badges": ["subscriber/36"],
   "color": "#FF4500",
-  "isMod": false,
-  "isSubscriber": true,
-  "isFirstMessage": false,
-  "isReturningChatter": false,
+  "tags": {
+    "badges": "subscriber/36",
+    "display-name": "lemonGTH"
+  },
+  "source": {
+    "raw": "lemongth!lemongth@lemongth.tmi.twitch.tv",
+    "nickname": "lemongth",
+    "username": "lemongth",
+    "host": "lemongth.tmi.twitch.tv"
+  },
   "raw": "@badge-info=..."
 }
 ```
@@ -101,17 +109,17 @@ The `data/` directory is ignored by git.
 Build the image:
 
 ```bash
-docker build -t twitch-chat-logger .
+docker build -t twitch-event-logger .
 ```
 
 Run it with an env file and a mounted data directory on Windows PowerShell:
 
 ```bash
-docker run --rm --env-file .env -v "${PWD}/data:/app/data" twitch-chat-logger
+docker run --rm --env-file .env -v "${PWD}/data:/app/data" twitch-event-logger
 ```
 
 On macOS/Linux, use:
 
 ```bash
-docker run --rm --env-file .env -v "$(pwd)/data:/app/data" twitch-chat-logger
+docker run --rm --env-file .env -v "$(pwd)/data:/app/data" twitch-event-logger
 ```

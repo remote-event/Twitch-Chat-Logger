@@ -2,74 +2,69 @@ import { mkdir, appendFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { TwitchIrcMessage } from "./twitch-irc-client.js";
 
-export type TrainingChatMessage = {
+export type TwitchEventRecord = {
   schemaVersion: 1;
   platform: "twitch";
-  type: "chat_message";
+  type: string;
+  command: string;
   messageId: string | undefined;
   timestamp: string;
   twitchTimestamp: string | undefined;
-  channel: string;
+  channel: string | undefined;
   roomId: string | undefined;
   userId: string | undefined;
   username: string | undefined;
   displayName: string | undefined;
-  text: string;
+  text: string | undefined;
+  params: string[];
   badges: string[];
   color: string | undefined;
-  isMod: boolean;
-  isSubscriber: boolean;
-  isFirstMessage: boolean;
-  isReturningChatter: boolean;
+  tags: Record<string, string | true>;
+  source: {
+    raw: string;
+    nickname: string | undefined;
+    username: string | undefined;
+    host: string | undefined;
+  } | undefined;
   raw: string;
 };
 
-export type ChatLogWriterOptions = {
+export type EventLogWriterOptions = {
   rootDir?: string;
 };
 
-const DEFAULT_ROOT_DIR = "data/chat/twitch";
+const DEFAULT_ROOT_DIR = "data/events/twitch";
 
-export class ChatLogWriter {
+export class EventLogWriter {
   private readonly rootDir: string;
 
-  public constructor(options: ChatLogWriterOptions = {}) {
+  public constructor(options: EventLogWriterOptions = {}) {
     this.rootDir = options.rootDir ?? DEFAULT_ROOT_DIR;
   }
 
   public async write(message: TwitchIrcMessage): Promise<void> {
-    const record = toTrainingChatMessage(message);
-
-    if (record === undefined) {
-      return;
-    }
-
+    const record = toTwitchEventRecord(message);
     const filePath = this.getFilePath(record);
+
     await mkdir(dirname(filePath), { recursive: true });
     await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
   }
 
-  private getFilePath(record: TrainingChatMessage): string {
+  private getFilePath(record: TwitchEventRecord): string {
     const date = record.timestamp.slice(0, 10);
-    const channel = safePathSegment(record.channel);
+    const channel = record.channel === undefined ? "_system" : safePathSegment(record.channel);
+    const eventType = safePathSegment(record.type);
 
     return join(
       this.rootDir,
       `channel=${channel}`,
       `date=${date}`,
-      "messages.jsonl",
+      `${eventType}.jsonl`,
     );
   }
 }
 
-export function toTrainingChatMessage(
-  message: TwitchIrcMessage,
-): TrainingChatMessage | undefined {
-  if (message.command !== "PRIVMSG" || message.channel === undefined) {
-    return undefined;
-  }
-
-  const text = message.text ?? "";
+export function toTwitchEventRecord(message: TwitchIrcMessage): TwitchEventRecord {
   const twitchTimestamp = getTag(message, "tmi-sent-ts");
   const timestamp =
     twitchTimestamp === undefined
@@ -79,7 +74,8 @@ export function toTrainingChatMessage(
   return {
     schemaVersion: 1,
     platform: "twitch",
-    type: "chat_message",
+    type: getEventType(message),
+    command: message.command,
     messageId: getTag(message, "id"),
     timestamp,
     twitchTimestamp,
@@ -88,15 +84,43 @@ export function toTrainingChatMessage(
     userId: getTag(message, "user-id"),
     username: message.source?.nickname,
     displayName: getTag(message, "display-name"),
-    text,
+    text: message.text,
+    params: message.params,
     badges: splitCsvTag(getTag(message, "badges")),
     color: getTag(message, "color"),
-    isMod: getTag(message, "mod") === "1",
-    isSubscriber: getTag(message, "subscriber") === "1",
-    isFirstMessage: getTag(message, "first-msg") === "1",
-    isReturningChatter: getTag(message, "returning-chatter") === "1",
+    tags: message.tags,
+    source: message.source,
     raw: message.raw,
   };
+}
+
+function getEventType(message: TwitchIrcMessage): string {
+  switch (message.command) {
+    case "PRIVMSG":
+      return "chat_message";
+    case "USERNOTICE":
+      return getTag(message, "msg-id") ?? "user_notice";
+    case "CLEARCHAT":
+      return "clear_chat";
+    case "CLEARMSG":
+      return "clear_message";
+    case "ROOMSTATE":
+      return "room_state";
+    case "USERSTATE":
+      return "user_state";
+    case "JOIN":
+      return "join";
+    case "PART":
+      return "part";
+    case "NOTICE":
+      return "notice";
+    case "PING":
+      return "ping";
+    case "RECONNECT":
+      return "reconnect";
+    default:
+      return message.command.toLowerCase();
+  }
 }
 
 function getTag(message: TwitchIrcMessage, key: string): string | undefined {

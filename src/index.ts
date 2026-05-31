@@ -1,26 +1,22 @@
 import "dotenv/config";
-import { ChatLogWriter } from "./chat-log-writer.js";
+import { EventLogWriter } from "./event-log-writer.js";
 import { TwitchIrcClient } from "./twitch-irc-client.js";
 
 const client = new TwitchIrcClient();
-const writer = new ChatLogWriter();
+const writer = new EventLogWriter();
 const channels = getChannels();
 
 client.onMessage((message) => {
-  if (message.command !== "PRIVMSG") {
-    return;
-  }
-
   void writer.write(message).catch((error: unknown) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to write chat message: ${errorMessage}`);
+    console.error(`Failed to write Twitch event: ${errorMessage}`);
   });
 });
 
 await client.connect();
 client.joinMany(channels);
 console.log("Connected to Twitch IRC.");
-console.log(`Logging channels: ${channels.join(", ")}`);
+console.log(`Logging Twitch events for channels: ${channels.join(", ")}`);
 
 function getChannels(): string[] {
   const rawChannels = process.env.TWITCH_CHANNELS ?? "xqc";
