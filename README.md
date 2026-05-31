@@ -8,7 +8,6 @@ A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or 
 - Multi-channel joins with `TWITCH_CHANNELS`
 - Parsed IRC messages with tags, source, command, channel, params, and text
 - Training-friendly JSONL output for `PRIVMSG` chat messages
-- TypeScript, ESLint, GitHub Actions CI, and Docker image build
 
 ## Requirements
 
@@ -116,13 +115,3 @@ On macOS/Linux, use:
 ```bash
 docker run --rm --env-file .env -v "$(pwd)/data:/app/data" twitch-chat-logger
 ```
-
-## CI
-
-GitHub Actions runs on pushes and pull requests to `main`:
-
-- `npm ci`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run build`
-- Docker image build on pushes
