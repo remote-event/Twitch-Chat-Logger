@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { TwitchIrcCommand, type TwitchIrcMessage } from "./twitch-irc-client.js";
 
 export type TwitchChatMessageRecord = {
+  timestamp: string;
   username: string | undefined;
   nickname: string | undefined;
   message: string;
@@ -50,10 +51,26 @@ export function toTwitchChatMessageRecord(
   }
 
   return {
+    timestamp: getMessageTimestamp(message).toISOString(),
     username: message.source?.username ?? message.source?.nickname,
     nickname: getTag(message, "display-name") ?? message.source?.nickname,
     message: message.text,
   };
+}
+
+function getMessageTimestamp(message: TwitchIrcMessage): Date {
+  const sentTimestamp = getTag(message, "tmi-sent-ts");
+
+  if (sentTimestamp !== undefined) {
+    const sentTime = Number(sentTimestamp);
+    const sentDate = new Date(sentTime);
+
+    if (Number.isFinite(sentTime) && Number.isFinite(sentDate.getTime())) {
+      return sentDate;
+    }
+  }
+
+  return new Date();
 }
 
 function getTag(message: TwitchIrcMessage, key: string): string | undefined {

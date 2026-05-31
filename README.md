@@ -7,7 +7,7 @@ A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or 
 - Anonymous Twitch IRC connection
 - Multi-channel joins with `TWITCH_CHANNELS`
 - JSONL output for chat messages only
-- Compact records containing `username`, `nickname`, and `message`
+- Compact records containing `timestamp`, `username`, `nickname`, and `message`
 
 ## Requirements
 
@@ -72,6 +72,7 @@ Each line is one Twitch chat message:
 
 ```json
 {
+  "timestamp": "2026-05-31T23:21:14.123Z",
   "username": "lemongth",
   "nickname": "lemonGTH",
   "message": "OfCourse"
