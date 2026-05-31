@@ -2,32 +2,10 @@ import { mkdir, appendFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { TwitchIrcCommand, type TwitchIrcMessage } from "./twitch-irc-client.js";
 
-export type TwitchEventRecord = {
-  schemaVersion: 1;
-  platform: "twitch";
-  type: string;
-  command: string;
-  commandType: TwitchIrcCommand;
-  messageId: string | undefined;
-  timestamp: string;
-  twitchTimestamp: string | undefined;
-  channel: string | undefined;
-  roomId: string | undefined;
-  userId: string | undefined;
+export type TwitchChatMessageRecord = {
   username: string | undefined;
-  displayName: string | undefined;
-  text: string | undefined;
-  params: string[];
-  badges: string[];
-  color: string | undefined;
-  tags: Record<string, string | true>;
-  source: {
-    raw: string;
-    nickname: string | undefined;
-    username: string | undefined;
-    host: string | undefined;
-  } | undefined;
-  raw: string;
+  nickname: string | undefined;
+  message: string;
 };
 
 export type EventLogWriterOptions = {
@@ -44,98 +22,43 @@ export class EventLogWriter {
   }
 
   public async write(message: TwitchIrcMessage): Promise<void> {
-    const record = toTwitchEventRecord(message);
-    const filePath = this.getFilePath(record);
+    const record = toTwitchChatMessageRecord(message);
+
+    if (record === undefined) {
+      return;
+    }
+
+    const filePath = this.getFilePath(message);
 
     await mkdir(dirname(filePath), { recursive: true });
     await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
   }
 
-  private getFilePath(record: TwitchEventRecord): string {
-    const date = record.timestamp.slice(0, 10);
-    const channel = record.channel === undefined ? "_system" : safePathSegment(record.channel);
-    const eventType = safePathSegment(record.type);
+  private getFilePath(message: TwitchIrcMessage): string {
+    const date = new Date().toISOString().slice(0, 10);
+    const channel = message.channel === undefined ? "_unknown" : safePathSegment(message.channel);
 
-    return join(
-      this.rootDir,
-      `channel=${channel}`,
-      `date=${date}`,
-      `${eventType}.jsonl`,
-    );
+    return join(this.rootDir, `channel=${channel}`, `date=${date}`, "chat_messages.jsonl");
   }
 }
 
-export function toTwitchEventRecord(message: TwitchIrcMessage): TwitchEventRecord {
-  const twitchTimestamp = getTag(message, "tmi-sent-ts");
-  const timestamp =
-    twitchTimestamp === undefined
-      ? new Date().toISOString()
-      : new Date(Number(twitchTimestamp)).toISOString();
+export function toTwitchChatMessageRecord(
+  message: TwitchIrcMessage,
+): TwitchChatMessageRecord | undefined {
+  if (message.command !== TwitchIrcCommand.PrivateMessage || message.text === undefined) {
+    return undefined;
+  }
 
   return {
-    schemaVersion: 1,
-    platform: "twitch",
-    type: getEventType(message),
-    command: message.rawCommand,
-    commandType: message.command,
-    messageId: getTag(message, "id"),
-    timestamp,
-    twitchTimestamp,
-    channel: message.channel,
-    roomId: getTag(message, "room-id"),
-    userId: getTag(message, "user-id"),
-    username: message.source?.nickname,
-    displayName: getTag(message, "display-name"),
-    text: message.text,
-    params: message.params,
-    badges: splitCsvTag(getTag(message, "badges")),
-    color: getTag(message, "color"),
-    tags: message.tags,
-    source: message.source,
-    raw: message.raw,
+    username: message.source?.username ?? message.source?.nickname,
+    nickname: getTag(message, "display-name") ?? message.source?.nickname,
+    message: message.text,
   };
-}
-
-function getEventType(message: TwitchIrcMessage): string {
-  switch (message.command) {
-    case TwitchIrcCommand.PrivateMessage:
-      return "chat_message";
-    case TwitchIrcCommand.UserNotice:
-      return getTag(message, "msg-id") ?? "user_notice";
-    case TwitchIrcCommand.ClearChat:
-      return "clear_chat";
-    case TwitchIrcCommand.ClearMessage:
-      return "clear_message";
-    case TwitchIrcCommand.RoomState:
-      return "room_state";
-    case TwitchIrcCommand.UserState:
-      return "user_state";
-    case TwitchIrcCommand.Join:
-      return "join";
-    case TwitchIrcCommand.Part:
-      return "part";
-    case TwitchIrcCommand.Notice:
-      return "notice";
-    case TwitchIrcCommand.Ping:
-      return "ping";
-    case TwitchIrcCommand.Reconnect:
-      return "reconnect";
-    case TwitchIrcCommand.Unknown:
-      return message.rawCommand.toLowerCase();
-  }
 }
 
 function getTag(message: TwitchIrcMessage, key: string): string | undefined {
   const value = message.tags[key];
   return typeof value === "string" ? value : undefined;
-}
-
-function splitCsvTag(value: string | undefined): string[] {
-  if (value === undefined || value.length === 0) {
-    return [];
-  }
-
-  return value.split(",").filter((item) => item.length > 0);
 }
 
 function safePathSegment(value: string): string {

@@ -1,13 +1,13 @@
-# Twitch Event Logger
+# Twitch Chat Logger
 
-A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or more channels, parses incoming IRC messages, and writes normalized JSONL event records for later analysis or model training.
+A small TypeScript app that connects to Twitch IRC over WebSocket, joins one or more channels, and writes chat messages to JSONL.
 
 ## Features
 
 - Anonymous Twitch IRC connection
 - Multi-channel joins with `TWITCH_CHANNELS`
-- Parsed IRC messages with tags, source, command, channel, params, and text
-- JSONL output for Twitch IRC events such as chat messages, user notices, joins, parts, room state changes, clears, notices, pings, and reconnects
+- JSONL output for chat messages only
+- Compact records containing `username`, `nickname`, and `message`
 
 ## Requirements
 
@@ -62,44 +62,19 @@ npm start
 
 ## Data Output
 
-Events are written as JSON Lines under:
+Chat messages are written as JSON Lines under:
 
 ```text
-data/events/twitch/channel=<channel>/date=<yyyy-mm-dd>/<event-type>.jsonl
+data/events/twitch/channel=<channel>/date=<yyyy-mm-dd>/chat_messages.jsonl
 ```
 
-Each line is one normalized Twitch event:
+Each line is one Twitch chat message:
 
 ```json
 {
-  "schemaVersion": 1,
-  "platform": "twitch",
-  "type": "chat_message",
-  "command": "PRIVMSG",
-  "commandType": "PRIVMSG",
-  "messageId": "f7ebdc6e-b360-4de2-aca3-bf4652755c28",
-  "timestamp": "2026-05-31T08:30:00.000Z",
-  "twitchTimestamp": "1780215664496",
-  "channel": "xqc",
-  "roomId": "71092938",
-  "userId": "250294961",
   "username": "lemongth",
-  "displayName": "lemonGTH",
-  "text": "OfCourse",
-  "params": ["#xqc"],
-  "badges": ["subscriber/36"],
-  "color": "#FF4500",
-  "tags": {
-    "badges": "subscriber/36",
-    "display-name": "lemonGTH"
-  },
-  "source": {
-    "raw": "lemongth!lemongth@lemongth.tmi.twitch.tv",
-    "nickname": "lemongth",
-    "username": "lemongth",
-    "host": "lemongth.tmi.twitch.tv"
-  },
-  "raw": "@badge-info=..."
+  "nickname": "lemonGTH",
+  "message": "OfCourse"
 }
 ```
 
