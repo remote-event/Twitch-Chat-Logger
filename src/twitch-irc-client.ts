@@ -64,13 +64,16 @@ export class TwitchIrcClient {
   }
 
   public join(channel: string): void {
-    const normalizedChannel = channel.trim().replace(/^#/, "").toLowerCase();
+    this.sendRaw(`JOIN ${this.formatChannel(channel)}`);
+  }
 
-    if (normalizedChannel.length === 0) {
-      throw new Error("Channel name cannot be empty.");
+  public joinMany(channels: string[]): void {
+    if (channels.length === 0) {
+      throw new Error("At least one channel is required.");
     }
 
-    this.sendRaw(`JOIN #${normalizedChannel}`);
+    const formattedChannels = channels.map((channel) => this.formatChannel(channel));
+    this.sendRaw(`JOIN ${formattedChannels.join(",")}`);
   }
 
   public disconnect(): void {
@@ -92,6 +95,16 @@ export class TwitchIrcClient {
     }
 
     this.socket.send(line);
+  }
+
+  private formatChannel(channel: string): string {
+    const normalizedChannel = channel.trim().replace(/^#/, "").toLowerCase();
+
+    if (normalizedChannel.length === 0) {
+      throw new Error("Channel name cannot be empty.");
+    }
+
+    return `#${normalizedChannel}`;
   }
 
   private handleMessage(payload: string): void {
