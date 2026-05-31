@@ -1,5 +1,5 @@
 {
-  "name": "twitch-event-logger",
+  "name": "twitch-chat-logger",
   "version": "0.1.0",
   "description": "Standalone TypeScript app.",
   "type": "module",

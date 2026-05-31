@@ -85,17 +85,17 @@ The `data/` directory is ignored by git.
 Build the image:
 
 ```bash
-docker build -t twitch-event-logger .
+docker build -t twitch-chat-logger .
 ```
 
 Run it with an env file and a mounted data directory on Windows PowerShell:
 
 ```bash
-docker run --rm --env-file .env -v "${PWD}/data:/app/data" twitch-event-logger
+docker run --rm --env-file .env -v "${PWD}/data:/app/data" twitch-chat-logger
 ```
 
 On macOS/Linux, use:
 
 ```bash
-docker run --rm --env-file .env -v "$(pwd)/data:/app/data" twitch-event-logger
+docker run --rm --env-file .env -v "$(pwd)/data:/app/data" twitch-chat-logger
 ```
